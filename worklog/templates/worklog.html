@@ -5,7 +5,6 @@
       xmlns:xi="http://www.w3.org/2001/XInclude"
       xmlns:py="http://genshi.edgewall.org/">
   <xi:include href="layout.html" />
-  <xi:include href="macros.html" />
   <head>
     <title>Work Log</title>
   </head>
@@ -26,7 +25,7 @@
             <th>Comment</th>
           </tr>
           <tr py:for="log in worklog">
-            <td><a href="${worklog_href}/users/${log.user}">${log.dispname}</a></td>
+            <td><a href="${worklog_href}/users/${log.user}">${user_fullname(log.user)}</a></td>
             <py:choose>
               <td py:when="log.endtime==0"><a class="${log.status} ticket" href="${ticket_href}/${log.ticket}">#${log.ticket}</a>: ${log.summary}</td>
               <td py:otherwise=""><em>Idle</em> <small>(Last worked on: <a class="${log.status}  ticket" href="${ticket_href}/${log.ticket}">#${log.ticket}</a>: ${log.summary})</small></td>

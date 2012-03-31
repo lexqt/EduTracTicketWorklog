@@ -1,16 +1,16 @@
-user_manual_title = "Work Log Plugin User Manual"
+user_manual_title = "Ticket Work Log Plugin User Manual"
 user_manual_version = 3
-user_manual_wiki_title = "WorkLogPluginUserManual"
+user_manual_wiki_title = "TicketWorkLogPluginUserManual"
 user_manual_content = """
-= !WorkLog Plugin User Manual =
+= !TicketWorkLog Plugin User Manual =
 This is a plugin that adds a Work Log capability to Trac.
 
 Basically, it allows you to register the fact you have started work on a ticket which effectively allows you to clock on and clock off.
 
 == General stuff ==
-The !WorkLog Plugin uses javascript to add a button to the ticket page to allow you to start/stop working on a given ticket.
+The !TicketWorkLog Plugin uses javascript to add a button to the ticket page to allow you to start/stop working on a given ticket.
 
-If the [http://trac-hacks.org/wiki/TimingAndEstimationPlugin TimingAndEstimationPlugin] is installed then when you clock off, the time spent on the ticket will be recorded - but only if you explicitly enabled this on the [/admin/ticket/worklog plugins admin page].
+If the [http://trac-hacks.org/wiki/TimingAndEstimationPlugin TimingAndEstimationPlugin] is installed then when you clock off, the time spent on the ticket will be recorded - but only if you explicitly enabled this in the config.
 
 If you visit the Work Log page (a new navigation entry), you will see a list of people (developers) and which tickets they are currently working on. Work log events are also logged to the Timeline for a historical view. 
 

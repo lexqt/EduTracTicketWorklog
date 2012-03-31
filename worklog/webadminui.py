@@ -1,22 +1,16 @@
 # -*- coding: utf-8 -*-
-import time
 
-from trac import ticket
-from trac import util
-from trac.core import *
-from trac.perm import IPermissionRequestor, PermissionSystem
-from trac.util import Markup
 from trac.ticket.admin import TicketAdminPanel
 
 
 class WorklogAdminPanel(TicketAdminPanel):
     _type = 'worklog'
-    _label = ('Work Log', 'Work Log')
+    _label = ('Ticket Work Log', 'Ticket Work Log')
 
     def _render_admin_panel(self, req, cat, page, component):
         req.perm.require('TICKET_ADMIN') and req.perm.require('WORK_ADMIN') 
 
-        bools = [ "timingandestimation", "trachoursplugin", "comment",
+        bools = [ "timingandestimation", "comment",
                   "autostop", "autostopstart", "autoreassignaccept" ]
         
         if req.method == 'POST' and req.args.has_key('update'):

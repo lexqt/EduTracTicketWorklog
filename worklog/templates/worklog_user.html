@@ -5,7 +5,6 @@
       xmlns:xi="http://www.w3.org/2001/XInclude"
       xmlns:py="http://genshi.edgewall.org/">
   <xi:include href="layout.html" />
-  <xi:include href="macros.html" />
   <head>
     <title>Work Log</title>
   </head>
@@ -13,7 +12,7 @@
   <body>
     <form method="post" action="${worklog_href}">
       <div id="content" class="worklog">
-        <h2>Work Log for ${worklog[0].dispname}</h2>
+        <h2>Work Log for ${user_fullname(username)}</h2>
         <div id="messages" >
           <div py:for="item in messages" class="message" >${item}</div>
         </div>

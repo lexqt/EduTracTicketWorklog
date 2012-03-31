@@ -1,36 +1,32 @@
 import re
 from StringIO import StringIO
-import codecs
 import csv
-from util import *
-from time import time
-from datetime import tzinfo, timedelta, datetime
-from usermanual import *
+
+from usermanual import user_manual_title, user_manual_wiki_title
 from manager import WorkLogManager
-from trac.log import logger_factory
 from trac.core import *
 from trac.perm import IPermissionRequestor
-from trac.web import IRequestHandler, IRequestFilter
-from trac.util.datefmt import format_date, format_time
+from trac.web import IRequestHandler
 from trac.util import Markup
-from trac.ticket import Ticket
-from trac.web.chrome import add_stylesheet, add_script, \
-     INavigationContributor, ITemplateProvider
-from trac.web.href import Href
-from trac.wiki.formatter import wiki_to_html
-from trac.util.text import CRLF
+from trac.web.chrome import add_stylesheet, INavigationContributor, ITemplateProvider
+
+from trac.project.api import ProjectManagement
+
 
 class WorkLogPage(Component):
+
     implements(IPermissionRequestor, INavigationContributor, IRequestHandler, ITemplateProvider)
 
     def __init__(self):
-        pass
+        self.mgr = WorkLogManager(self.env)
 
-    # IPermissionRequestor methods
+    # IPermissionRequestor
+
     def get_permission_actions(self):
         return ['WORK_LOG', ('WORK_VIEW', ['WORK_LOG']), ('WORK_ADMIN', ['WORK_VIEW'])]
 
-    # INavigationContributor methods
+    # INavigationContributor
+
     def get_active_navigation_item(self, req):
         return 'worklog'
 
@@ -42,40 +38,38 @@ class WorkLogPage(Component):
                          (url , "Work Log"))
 
     # Internal Methods
-    def worklog_csv(self, req, log):
-      #req.send_header('Content-Type', 'text/plain')
-      req.send_header('Content-Type', 'text/csv;charset=utf-8')
-      req.send_header('Content-Disposition', 'filename=worklog.csv')
-      
-      # Headers
-      fields = ['user',
-                'name',
-                'starttime',
-                'endtime',
-                'ticket',
-                'summary',
-                'comment']
-      sep=','
+    def _worklog_csv(self, req, log):
+        #req.send_header('Content-Type', 'text/plain')
+        req.send_header('Content-Type', 'text/csv;charset=utf-8')
+        req.send_header('Content-Disposition', 'filename=worklog.csv')
 
-      content = StringIO()
-      writer = csv.writer(content, delimiter=sep, quoting=csv.QUOTE_MINIMAL)
-      writer.writerow([unicode(c).encode('utf-8') for c in fields])
+        # Headers
+        fields = ['user',
+                  'starttime',
+                  'endtime',
+                  'ticket',
+                  'summary',
+                  'comment']
+        sep=','
 
-      # Rows
-      for row in log:
-        values=[]
-        for field in fields:
-          values.append(unicode(row[field]).encode('utf-8'))
-        writer.writerow(values)
+        content = StringIO()
+        writer = csv.writer(content, delimiter=sep, quoting=csv.QUOTE_MINIMAL)
+        writer.writerow([unicode(c).encode('utf-8') for c in fields])
 
-      req.send_header('Content-Length', content.len)
-      req.write(content.getvalue())
-    
-    # IRequestHandler methods
+        # Rows
+        for row in log:
+            values=[]
+            for field in fields:
+                values.append(unicode(row[field]).encode('utf-8'))
+            writer.writerow(values)
+
+        req.send_header('Content-Length', content.len)
+        req.write(content.getvalue())
+
+    # IRequestHandler
+
     def match_request(self, req):
-        if re.search('^/worklog', req.path_info):
-            return True
-        return None
+        return req.path_info.startswith('/worklog')
 
     def process_request(self, req):
         req.perm.require('WORK_VIEW')
@@ -85,84 +79,87 @@ class WorkLogPage(Component):
         def addMessage(s):
             messages.extend([s]);
 
-        # General protection (not strictly needed if Trac behaves itself)
-        if not re.search('/worklog', req.path_info):
-            return None
-        
+        pm = ProjectManagement(self.env)
+        self.pm = pm
+        pid = pm.get_and_check_current_project(req, allow_multi=True)
+
         add_stylesheet(req, "worklog/worklogplugin.css")
 
-        # Specific pages:
+        # Specific pages
+
         match = re.search('/worklog/users/(.*)', req.path_info)
         if match:
-          mgr = WorkLogManager(self.env, self.config, match.group(1))
-          if req.args.has_key('format') and req.args['format'] == 'csv':
-            self.worklog_csv(req, mgr.get_work_log('user'))
-            return None
-          
-          data = {"worklog": mgr.get_work_log('user'),
-                  "ticket_href": req.href.ticket(),
-                  "usermanual_href":req.href.wiki(user_manual_wiki_title),
-                  "usermanual_title":user_manual_title
-                  }
-          return 'worklog_user.html', data, None
+            username = match.group(1)
+            return self._user_worklog(req, username, pid)
 
         match = re.search('/worklog/stop/([0-9]+)', req.path_info)
         if match:
-          ticket = match.group(1)
-          data = {'worklog_href': req.href.worklog(),
-                  'ticket_href':  req.href.ticket(ticket),
-                  'ticket':       ticket,
-                  'action':       'stop',
-                  'label':        'Stop Work'}
-          xhr = req.get_header('X-Requested-With') == 'XMLHttpRequest'
-          if xhr:
-              data['xhr'] = True
-          return 'worklog_stop.html', data, None
-        
-        mgr = WorkLogManager(self.env, self.config, req.authname)
+            tkt_id = match.group(1)
+            return self._work_stop(req, tkt_id)
+
+
+        username = req.authname
         if req.args.has_key('format') and req.args['format'] == 'csv':
-            self.worklog_csv(req, mgr.get_work_log())
-            return None
-        
+            return self._worklog_csv(req, self.mgr.get_work_log(pid))
+
         # Not any specific page, so process POST actions here.
         if req.method == 'POST':
             if req.args.has_key('startwork') and req.args.has_key('ticket'):
-                if not mgr.start_work(req.args['ticket']):
-                    addMessage(mgr.get_explanation())
+                tkt_id = req.args['ticket']
+                res, err = self.mgr.start_work(username, tkt_id)
+                if not res:
+                    addMessage(err)
                 else:
-                    addMessage('You are now working on ticket #%s.' % (req.args['ticket'],))
-                
+                    addMessage('You are now working on ticket #%s.' % (tkt_id,))
+
                 req.redirect(req.args['source_url'])
-                return None
-                
+
             elif req.args.has_key('stopwork'):
-                stoptime = None
-                if req.args.has_key('stoptime') and req.args['stoptime']:
-                    stoptime = int(req.args['stoptime'])
-
-                comment = ''
-                if req.args.has_key('comment'):
-                    comment = req.args['comment']
-
-                if not mgr.stop_work(stoptime, comment):
-                    addMessage(mgr.get_explanation())
+                res, err = self.mgr.stop_work(username, pid, req.args.getint('stoptime'), req.args.get('comment'))
+                if not res:
+                    addMessage(err)
                 else:
                     addMessage('You have stopped working.')
-                
-                req.redirect(req.args['source_url'])
-                return None
-        
+
+                req.redirect(req.args.get('source_url'))
+
         # no POST, so they're just wanting a list of the worklog entries
         data = {"messages": messages,
-                "worklog": mgr.get_work_log('summary'),
+                "worklog": self.mgr.get_work_log(pid, mode='latest'),
                 "worklog_href": req.href.worklog(),
                 "ticket_href": req.href.ticket(),
                 "usermanual_href": req.href.wiki(user_manual_wiki_title),
                 "usermanual_title": user_manual_title
                 }
         return 'worklog.html', data, None
-        
-        
+
+    def _user_worklog(self, req, username, pid):
+        users = self.pm.get_project_users(pid)
+        if username not in users:
+            raise TracError('You can not view work log for users from other projects')
+
+        worklog = self.mgr.get_work_log(pid, username, mode='user')
+
+        if req.args.has_key('format') and req.args['format'] == 'csv':
+            return self._worklog_csv(req, worklog)
+
+        data = {"worklog": worklog,
+                "username": username,
+                "ticket_href": req.href.ticket(),
+                "usermanual_href": req.href.wiki(user_manual_wiki_title),
+                "usermanual_title": user_manual_title
+                }
+        return 'worklog_user.html', data, None
+
+    def _work_stop(self, req, tkt_id):
+        data = {'worklog_href': req.href.worklog(),
+                'ticket_href':  req.href.ticket(tkt_id),
+                'ticket':       tkt_id,
+                'xhr':          req.is_ajax,
+                'action':       'stop',
+                'label':        'Stop Work'}
+        return 'worklog_stop.html', data, None
+
     # ITemplateProvider
     def get_htdocs_dirs(self):
         """Return the absolute path of a directory containing additional

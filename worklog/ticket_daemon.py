@@ -2,30 +2,32 @@ from trac.ticket import ITicketChangeListener, Ticket
 from trac.core import *
 from manager import WorkLogManager
 
+from trac.project.api import ProjectManagement
+
 class WorkLogTicketObserver(Component):
+
     implements(ITicketChangeListener)
+
     def __init__(self):
-        pass
+        self.mgr = WorkLogManager(self.env)
 
     def ticket_created(self, ticket):
         """Called when a ticket is created."""
         pass
-    
+
     def ticket_changed(self, ticket, comment, author, old_values):
         """Called when a ticket is modified.
         
         `old_values` is a dictionary containing the previous values of the
         fields that have changed.
         """
-        if self.config.getbool('worklog', 'autostop') \
+        syllabus_id = ProjectManagement(self.env).get_project_syllabus(ticket.pid)
+        if self.mgr.autostop.syllabus(syllabus_id) \
                and 'closed' == ticket['status'] \
-               and old_values.has_key('status') \
-               and 'closed' != old_values['status']:
-            mgr = WorkLogManager(self.env, self.config)
-            who,since = mgr.who_is_working_on(ticket.id)
+               and 'closed' != old_values.get('status'):
+            who, since = self.mgr.who_is_working_on(ticket.id)
             if who:
-                mgr = WorkLogManager(self.env, self.config, who)
-                mgr.stop_work()
+                self.mgr.stop_work(who, ticket.pid)
 
     def ticket_deleted(self, ticket):
         """Called when a ticket is deleted."""
