@@ -5,6 +5,7 @@ from trac.web.api import ITemplateStreamFilter
 from trac.web.chrome import add_stylesheet, add_script
 from trac.wiki import wiki_to_oneliner
 from trac.util import pretty_timedelta
+from trac.project.api import ProjectManagement
 
 from manager import WorkLogManager
 
@@ -17,6 +18,7 @@ class WorkLogTicketAddon(Component):
 
     def __init__(self):
         self.mgr = WorkLogManager(self.env)
+        self.pm = ProjectManagement(self.env)
 
     def get_task_markup(self, req, ticket, task):
         if not task:
@@ -95,8 +97,9 @@ class WorkLogTicketAddon(Component):
 
     def filter_stream(self, req, method, filename, stream, data):
         match = re.match(r'/ticket/([0-9]+)$', req.path_info)
-        if match and req.perm.has_permission('WORK_LOG'):
+        if match and req.perm.has_permission('WORK_LOG') and 'ticket' in data:
             ticket = data['ticket']
+            self.pm.check_component_enabled(self, pid=ticket.pid)
             tkt_id = ticket.id
 
             add_stylesheet(req, "worklog/worklogplugin.css")
