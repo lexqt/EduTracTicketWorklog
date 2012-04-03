@@ -40,3 +40,8 @@ class WorklogAdminPanel(TicketAdminPanel):
         
         settings['view'] = 'settings'
         return 'worklog_webadminui.html', settings
+
+    # IAdminCommandProvider
+
+    def get_admin_commands(self):
+        return None
