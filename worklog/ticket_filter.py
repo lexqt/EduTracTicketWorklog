@@ -107,8 +107,12 @@ class WorkLogTicketAddon(Component):
             add_script(req, 'worklog/jqModal.js')
             add_stylesheet(req, 'worklog/jqModal.css')
 
-            add_script(req, 'worklog/ui.datepicker.js')
-            add_stylesheet(req, 'worklog/ui.datepicker.css')
+            add_stylesheet(req, 'common/css/jquery-ui/jquery.ui.core.css')
+            add_stylesheet(req, 'common/css/jquery-ui/jquery.ui.datepicker.css')
+            add_stylesheet(req, 'common/css/jquery-ui/jquery.ui.theme.css')
+            add_script(req, 'common/js/jquery.ui.core.js')
+            add_script(req, 'common/js/jquery.ui.widget.js')
+            add_script(req, 'common/js/jquery.ui.datepicker.js')
 
             add_script(req, 'worklog/jquery.mousewheel.pack.js')
             add_script(req, 'worklog/jquery.timeentry.pack.js')
