@@ -1,8 +1,8 @@
-from trac.ticket import ITicketChangeListener, Ticket
-from trac.core import *
+from trac.ticket import ITicketChangeListener
+from trac.core import Component, implements
 from manager import WorkLogManager
 
-from trac.project.api import ProjectManagement
+
 
 class WorkLogTicketObserver(Component):
 
@@ -21,7 +21,7 @@ class WorkLogTicketObserver(Component):
         `old_values` is a dictionary containing the previous values of the
         fields that have changed.
         """
-        syllabus_id = ProjectManagement(self.env).get_project_syllabus(ticket.pid)
+        syllabus_id = ticket.syllabus_id
         if self.mgr.autostop.syllabus(syllabus_id) \
                and 'closed' == ticket['status'] \
                and 'closed' != old_values.get('status'):
