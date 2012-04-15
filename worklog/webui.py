@@ -81,7 +81,7 @@ class WorkLogPage(Component):
 
         pm = ProjectManagement(self.env)
         self.pm = pm
-        pid = pm.get_and_check_current_project(req, allow_multi=True)
+        pid = pm.get_current_project(req)
         pm.check_component_enabled(self, pid=pid)
 
         add_stylesheet(req, "worklog/worklogplugin.css")
