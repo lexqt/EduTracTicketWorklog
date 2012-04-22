@@ -23,9 +23,12 @@ class WorkLogTimelineAddon(Component):
             yield ('workstart', 'Work started', True)
             yield ('workstop', 'Work stopped', True)
 
-    def get_timeline_events(self, req, start, stop, filters, pid):
+    def get_timeline_events(self, req, start, stop, filters, pid, syllabus_id):
         if pid is None:
-            # TODO
+            return
+        is_multi = isinstance(pid, (list, tuple))
+        if is_multi:
+            # TODO:
             return
 
         # Worklog changes
@@ -60,7 +63,7 @@ class WorkLogTimelineAddon(Component):
                 if kind == 'start':
                     if not show_starts:
                         continue
-                    yield ('workstart', time, worker, (ticket,summary,status,resolution,type, started, ""))
+                    yield ('workstart', pid, time, worker, (ticket,summary,status,resolution,type, started, ""))
                 else:
                     if not show_stops:
                         continue
@@ -69,10 +72,10 @@ class WorkLogTimelineAddon(Component):
                         comment = "(Time spent: %s)\n\n%s" % (pretty_timedelta(started, time), comment)
                     else:
                         comment = '(Time spent: %s)' % pretty_timedelta(started, time)
-                    yield ('workstop', time, worker, (ticket,summary,status,resolution,type, started, comment))
+                    yield ('workstop', pid, time, worker, (ticket,summary,status,resolution,type, started, comment))
 
     def render_timeline_event(self, context, field, event):
-        ticket,summary,status,resolution,type, started, comment = event[3]
+        ticket,summary,status,resolution,type, started, comment = event[4]
         if field == 'url':
             return context.href.ticket(ticket.id)
         elif field == 'title':
